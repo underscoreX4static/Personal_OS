@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 
-const HERMES_BIN = process.env.HERMES_BIN || '/Users/certideal/.local/bin/hermes';
+const HERMES_BIN = process.env.HERMES_BIN || '/root/.local/bin/hermes';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
+const HOME_DIR = process.env.HOME || '/root';
 
 // TODO: replace with direct Hermes API when available
 function callHermes(message: string, sessionId?: string): Promise<string> {
@@ -14,8 +15,8 @@ function callHermes(message: string, sessionId?: string): Promise<string> {
       env: {
         ...process.env,
         ANTHROPIC_API_KEY,
-        HOME: process.env.HOME || '/Users/certideal',
-        PATH: `/Users/certideal/.local/bin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH}`,
+        HOME: HOME_DIR,
+        PATH: `${HOME_DIR}/.local/bin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH}`,
       },
       timeout: 60000,
     });
