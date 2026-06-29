@@ -1,0 +1,40 @@
+import type { Profile, OnboardingQuestion } from '@/types';
+
+export const INITIAL_PROFILE: Profile = {
+  identity: { name: null, age: null, nationality: null, current_location: null, visa_status: null, languages: [] },
+  who_i_am: { strengths: [], weaknesses: [], personality_traits: [], how_i_work_best: null, what_drains_me: null, what_energizes_me: null },
+  values: { core_values: [], non_negotiables: [], what_success_means_to_me: null },
+  objectives: { short_term: [], mid_term: [], long_term: [], north_star: null },
+  active_projects: [],
+  constraints: { financial: null, time: null, legal: [], personal: [] },
+  health_sport: { current_routine: null, goals: [], blockers: [] },
+  decisions_log: [],
+};
+
+export const ONBOARDING_POOL: OnboardingQuestion[] = [
+  { id: "q_name", question: "Comment tu t’appelles, et t’as quel âge ?", field: "identity.name + identity.age", done: false },
+  { id: "q_location", question: "T’es où en ce moment, et c’est quoi ton statut (visa, résidence) ?", field: "identity.current_location + identity.visa_status", done: false },
+  { id: "q_languages", question: "Tu parles quelles langues, et à quel niveau ?", field: "identity.languages", done: false },
+  { id: "q_strengths", question: "Quelles sont tes 3 grandes forces — les trucs où t’es vraiment bon et que les autres remarquent ?", field: "who_i_am.strengths", done: false },
+  { id: "q_weaknesses", question: "Tes 2-3 vraies faiblesses — pas celles que tu dis en entretien, les vraies.", field: "who_i_am.weaknesses", done: false },
+  { id: "q_work_best", question: "Dans quelles conditions tu travailles le mieux ? (heure, lieu, contexte, seul vs entouré)", field: "who_i_am.how_i_work_best", done: false },
+  { id: "q_drains", question: "Qu’est-ce qui te vide d’énergie rapidement ?", field: "who_i_am.what_drains_me", done: false },
+  { id: "q_energizes", question: "Qu’est-ce qui te donne de l’énergie, même quand t’es à plat ?", field: "who_i_am.what_energizes_me", done: false },
+  { id: "q_values", question: "Si tu devais nommer tes 3-5 valeurs les plus importantes — les trucs sur lesquels tu ne transiges pas — c’est quoi ?", field: "values.core_values", done: false },
+  { id: "q_non_neg", question: "C’est quoi tes non-négociables dans la vie ? Les trucs que tu refuserais quoi qu’il arrive.", field: "values.non_negotiables", done: false },
+  { id: "q_success", question: "Pour toi, c’est quoi le succès ? Pas la réponse standard — la vraie.", field: "values.what_success_means_to_me", done: false },
+  { id: "q_north_star", question: "Dans 10 ans, si tout se passe exactement comme tu veux, à quoi ressemble ta vie ?", field: "objectives.north_star", done: false },
+  { id: "q_long", question: "Quels sont tes 2-3 grands objectifs sur les 3-5 prochaines années ?", field: "objectives.long_term", done: false },
+  { id: "q_mid", question: "Sur les 12 prochains mois, qu’est-ce que tu veux avoir accompli absolument ?", field: "objectives.mid_term", done: false },
+  { id: "q_short", question: "Sur les 30 prochains jours, c’est quoi ta priorité numéro un ?", field: "objectives.short_term", done: false },
+  { id: "q_projects", question: "Quels sont tous tes projets actifs en ce moment — même les petits, même les flous ?", field: "active_projects", done: false },
+  { id: "q_main_project", question: "Sur lequel de tes projets tu devrais mettre le plus d’énergie là maintenant, honnêtement ?", field: "active_projects.priority", done: false },
+  { id: "q_money", question: "Côté argent, t’en es où ? T’as quoi comme runway, quelles contraintes financières en ce moment ?", field: "constraints.financial", done: false },
+  { id: "q_legal", question: "T’as des contraintes légales ou administratives urgentes à gérer ? (visa, impôts, contrats, etc.)", field: "constraints.legal", done: false },
+  { id: "q_time", question: "Combien d’heures par semaine t’as vraiment disponibles pour tes projets ?", field: "constraints.time", done: false },
+  { id: "q_sport", question: "T’as une routine sport en ce moment ? C’est quoi tes objectifs physiques ?", field: "health_sport", done: false },
+  { id: "q_fear", question: "C’est quoi ta plus grande peur en ce moment — pas la peur générique, la vraie peur qui t’empêche d’avancer ?", field: "who_i_am.personality_traits", done: false },
+  { id: "q_past", question: "C’est quoi la décision passée dont tu es le plus fier ? Et celle que tu referais différemment ?", field: "decisions_log", done: false },
+  { id: "q_who_become", question: "Qui tu veux devenir — pas ce que tu veux faire, mais qui tu veux être ?", field: "objectives.north_star", done: false },
+  { id: "q_pattern", question: "C’est quoi le pattern négatif qui revient le plus souvent dans ta vie ? Ce truc que tu fais encore et encore malgré toi.", field: "who_i_am.weaknesses", done: false },
+];

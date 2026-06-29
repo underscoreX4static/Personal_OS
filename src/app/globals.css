@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --violet: #6D28D9;
+  --pink: #FF3D7F;
+  --grad: linear-gradient(135deg, #6D28D9, #C026D3, #FF3D7F);
+  --bg: #110F16;
+  --bg2: #16131D;
+  --card: #191622;
+  --line: #272232;
+  --ink: #F4F1FA;
+  --mut: #A79FB8;
+}
+
+.light {
+  --bg: #FFFFFF;
+  --bg2: #FAF7FE;
+  --card: #FFFFFF;
+  --line: #ECE6F6;
+  --ink: #17131F;
+  --mut: #5C5470;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: 'Inter', sans-serif;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.font-display {
+  font-family: 'Big Shoulders Display', sans-serif;
+}
+
+.font-mono {
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Bounce animation for typing indicator */
+@keyframes bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+
+/* Safe area background extension */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+/* Scroll momentum */
+.scroll-touch {
+  -webkit-overflow-scrolling: touch;
+  overflow-y: auto;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 2px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 1px;
+}
+
+/* Gradient text */
+.grad-text {
+  background: var(--grad);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
