@@ -8,6 +8,17 @@ import { MessageBubble, TypingIndicator } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import type { Message } from '@/types';
 
+async function callHermesAPI(text: string): Promise<string> {
+  const res = await fetch('/api/chat', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ message: text }),
+  });
+  if (!res.ok) throw new Error('Hermes API error');
+  const data = await res.json();
+  return data.reply;
+}
+
 function nanoid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -55,13 +66,20 @@ export function ChatTab() {
     storeAddMessage(userMsg);
     setHermesTyping(true);
 
-    // Simulate Hermes thinking delay
-    await new Promise((r) => setTimeout(r, 800 + Math.random() * 600));
+    let content: string;
+    try {
+      // Try real Hermes API first, fall back to mock if unavailable
+      content = await callHermesAPI(text);
+    } catch {
+      // TODO: replace with Claude API call — fallback to local mock when Hermes unavailable
+      const response = await processMessage(text);
+      content = response.content;
+    }
 
-    const response = await processMessage(text);
     const hermesMsg: Message = {
-      ...response,
       id: nanoid(),
+      role: 'hermes',
+      content,
       timestamp: Date.now(),
     };
     await addMessage(hermesMsg);
