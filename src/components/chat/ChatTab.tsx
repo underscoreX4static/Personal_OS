@@ -3,7 +3,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { getMessages, addMessage } from '@/lib/db';
-import { processMessage } from '@/lib/hermes';
 import { MessageBubble, TypingIndicator } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import type { Message } from '@/types';
@@ -66,25 +65,28 @@ export function ChatTab() {
     storeAddMessage(userMsg);
     setHermesTyping(true);
 
-    let content: string;
     try {
-      // Try real Hermes API first, fall back to mock if unavailable
-      content = await callHermesAPI(text);
-    } catch {
-      // TODO: replace with Claude API call — fallback to local mock when Hermes unavailable
-      const response = await processMessage(text);
-      content = response.content;
+      const content = await callHermesAPI(text);
+      const hermesMsg: Message = {
+        id: nanoid(),
+        role: 'hermes',
+        content,
+        timestamp: Date.now(),
+      };
+      await addMessage(hermesMsg);
+      storeAddMessage(hermesMsg);
+    } catch (error) {
+      const errorMsg: Message = {
+        id: nanoid(),
+        role: 'hermes',
+        content: `Désolé, je n'arrive pas à me connecter au serveur Hermes en ce moment. Vérifie ta connexion internet et réessaie.\n\nErreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
+        timestamp: Date.now(),
+      };
+      await addMessage(errorMsg);
+      storeAddMessage(errorMsg);
+    } finally {
+      setHermesTyping(false);
     }
-
-    const hermesMsg: Message = {
-      id: nanoid(),
-      role: 'hermes',
-      content,
-      timestamp: Date.now(),
-    };
-    await addMessage(hermesMsg);
-    storeAddMessage(hermesMsg);
-    setHermesTyping(false);
   }, [storeAddMessage, setHermesTyping]);
 
   const handleQuickReply = useCallback((reply: string) => {
