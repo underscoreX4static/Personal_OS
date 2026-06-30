@@ -22,7 +22,7 @@ WORKDIR /app/.hermes/hermes-agent
 # Install Python 3.11 via uv and create venv
 RUN uv python install 3.11 && \
     uv venv --python 3.11 venv && \
-    uv sync --all-extras
+    uv pip install --python venv -e .
 
 # Verify Hermes binary exists
 RUN ls -la /app/.hermes/hermes-agent/venv/bin/ && \
