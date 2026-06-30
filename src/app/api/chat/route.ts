@@ -3,7 +3,12 @@ import { spawn } from 'child_process';
 
 const HERMES_BIN = process.env.HERMES_BIN || '/app/.hermes/bin/hermes';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const HOME_DIR = process.env.HOME || '/app/.hermes/config';
+const HOME_DIR = process.env.HOME || '/app/.hermes/hermes-agent';
+
+// Debug: log env vars at startup
+console.log('[STARTUP] All env vars:', Object.keys(process.env));
+console.log('[STARTUP] ANTHROPIC_API_KEY present:', 'ANTHROPIC_API_KEY' in process.env);
+console.log('[STARTUP] ANTHROPIC_API_KEY value:', ANTHROPIC_API_KEY ? `${ANTHROPIC_API_KEY.substring(0, 10)}...` : 'EMPTY');
 
 // TODO: replace with direct Hermes API when available
 function callHermes(message: string, sessionId?: string): Promise<string> {
@@ -17,6 +22,7 @@ function callHermes(message: string, sessionId?: string): Promise<string> {
       env: {
         ...process.env,
         ANTHROPIC_API_KEY,
+        ANTHROPICAPIKEY: ANTHROPIC_API_KEY, // Hermes might look for this
         HOME: HOME_DIR,
         PATH: `${HOME_DIR}/.local/bin:/usr/local/bin:/usr/bin:/bin:${process.env.PATH}`,
       },
@@ -92,6 +98,7 @@ export async function POST(req: NextRequest) {
     console.log('[API] Calling Hermes with message:', message.trim());
     console.log('[API] HERMES_BIN:', HERMES_BIN);
     console.log('[API] ANTHROPIC_API_KEY set:', !!ANTHROPIC_API_KEY);
+    console.log('[API] ANTHROPIC_API_KEY value (first 10 chars):', ANTHROPIC_API_KEY.substring(0, 10));
     console.log('[API] HOME_DIR:', HOME_DIR);
 
     const reply = await callHermes(message.trim(), sessionId);

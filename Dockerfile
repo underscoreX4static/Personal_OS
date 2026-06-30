@@ -37,9 +37,8 @@ RUN mkdir -p /app/.hermes/bin && \
 # Test the launcher works
 RUN /app/.hermes/bin/hermes --version || echo "Warning: hermes --version failed (might need API key)"
 
-# Hermes config in /app
-RUN mkdir -p /app/.hermes/config && \
-    printf 'model:\n  default: claude-haiku-4-5-20251001\n  provider: anthropic\n  api_key: ""\nagent:\n  max_turns: 50\n  system_prompt_enabled: true\n_config_version: 31\n' > /app/.hermes/config/config.yaml
+# Copy Hermes config
+COPY hermes-config.yaml /app/.hermes/hermes-agent/.hermes/config.yaml
 
 # Copy Next.js app and build
 WORKDIR /app
@@ -52,7 +51,7 @@ RUN ls -la /app/.hermes/hermes-agent/venv/bin/hermes && \
     echo "✓ Hermes persisted after Next.js build"
 
 ENV HERMES_BIN=/app/.hermes/bin/hermes
-ENV HOME=/app/.hermes/config
+ENV HOME=/app/.hermes/hermes-agent
 ENV NODE_ENV=production
 ENV PORT=3000
 
