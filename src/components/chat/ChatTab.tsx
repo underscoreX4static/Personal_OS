@@ -7,11 +7,11 @@ import { MessageBubble, TypingIndicator } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import type { Message } from '@/types';
 
-async function callHermesAPI(text: string, sessionId: string): Promise<string> {
+async function callHermesAPI(text: string): Promise<string> {
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ message: text, sessionId }),
+    body: JSON.stringify({ message: text }),
   });
   if (!res.ok) throw new Error('Hermes API error');
   const data = await res.json();
@@ -47,13 +47,12 @@ export function ChatTab() {
 
         // Initialize Hermes with system prompt on first use
         try {
-          const sessionId = await getHermesSession();
           const systemPrompt = `Tu es Hermes, l'assistant personnel qui tourne 24/7 dans le Personal OS de l'utilisateur.
 
 Ton rôle :
 - Aide au planning, reminders, décisions, projets
 - Apprends à connaître l'utilisateur via des questions (onboarding)
-- Garde la mémoire de toutes les conversations grâce à --resume
+- Utilise ta feature memory pour te souvenir de l'utilisateur entre les conversations
 - Réponds toujours en français
 - Sois proactif et empathique
 
@@ -65,10 +64,7 @@ Important : L'utilisateur communique via une PWA mobile, donc garde tes réponse
           await fetch('/api/chat', {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({
-              message: systemPrompt,
-              sessionId
-            }),
+            body: JSON.stringify({ message: systemPrompt }),
           });
         } catch (error) {
           console.error('Failed to initialize Hermes:', error);
@@ -95,9 +91,7 @@ Important : L'utilisateur communique via une PWA mobile, donc garde tes réponse
     setHermesTyping(true);
 
     try {
-      // Get or create persistent Hermes session
-      const sessionId = await getHermesSession();
-      const content = await callHermesAPI(text, sessionId);
+      const content = await callHermesAPI(text);
       const hermesMsg: Message = {
         id: nanoid(),
         role: 'hermes',
