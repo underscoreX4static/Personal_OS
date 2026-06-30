@@ -11,6 +11,8 @@ function callHermes(message: string, sessionId?: string): Promise<string> {
     const args = ['chat', '-q', message];
     if (sessionId) args.push('--resume', sessionId);
 
+    console.log('[callHermes] Spawning:', HERMES_BIN, args);
+
     const proc = spawn(HERMES_BIN, args, {
       env: {
         ...process.env,
@@ -24,10 +26,22 @@ function callHermes(message: string, sessionId?: string): Promise<string> {
     let output = '';
     let error = '';
 
-    proc.stdout.on('data', (d) => { output += d.toString(); });
-    proc.stderr.on('data', (d) => { error += d.toString(); });
+    proc.stdout.on('data', (d) => {
+      const chunk = d.toString();
+      console.log('[callHermes] stdout:', chunk);
+      output += chunk;
+    });
+    proc.stderr.on('data', (d) => {
+      const chunk = d.toString();
+      console.log('[callHermes] stderr:', chunk);
+      error += chunk;
+    });
 
     proc.on('close', (code) => {
+      console.log('[callHermes] Process closed with code:', code);
+      console.log('[callHermes] Total output:', output);
+      console.log('[callHermes] Total error:', error);
+
       if (code !== 0 && !output) {
         reject(new Error(error || 'Hermes process failed'));
         return;
@@ -75,11 +89,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Message vide' }, { status: 400 });
     }
 
+    console.log('[API] Calling Hermes with message:', message.trim());
+    console.log('[API] HERMES_BIN:', HERMES_BIN);
+    console.log('[API] ANTHROPIC_API_KEY set:', !!ANTHROPIC_API_KEY);
+    console.log('[API] HOME_DIR:', HOME_DIR);
+
     const reply = await callHermes(message.trim(), sessionId);
 
+    console.log('[API] Hermes reply:', reply);
     return NextResponse.json({ reply });
   } catch (err) {
-    console.error('Hermes API error:', err);
+    console.error('[API] Hermes API error:', err);
+    console.error('[API] Error type:', err instanceof Error ? err.constructor.name : typeof err);
+    console.error('[API] Error message:', err instanceof Error ? err.message : String(err));
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Erreur inconnue' },
       { status: 500 }

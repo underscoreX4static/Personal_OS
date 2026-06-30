@@ -17,12 +17,16 @@ WORKDIR /root/.hermes/hermes-agent
 # Install Python 3.11 via uv and create venv
 RUN uv python install 3.11 && \
     uv venv --python 3.11 venv && \
-    uv sync --all-extras
+    uv sync --all-extras && \
+    ls -la /root/.hermes/hermes-agent/venv/bin/
 
 # Create hermes launcher
 RUN mkdir -p /root/.local/bin && \
     printf '#!/usr/bin/env bash\nunset PYTHONPATH\nunset PYTHONHOME\nexec "/root/.hermes/hermes-agent/venv/bin/hermes" "$@"\n' > /root/.local/bin/hermes && \
-    chmod +x /root/.local/bin/hermes
+    chmod +x /root/.local/bin/hermes && \
+    echo "=== Testing Hermes installation ===" && \
+    ls -la /root/.local/bin/hermes && \
+    cat /root/.local/bin/hermes
 
 ENV PATH="/root/.local/bin:$PATH"
 
