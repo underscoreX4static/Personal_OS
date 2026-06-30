@@ -2,16 +2,16 @@
 
 import { useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { getMessages, addMessage } from '@/lib/db';
+import { getMessages, addMessage, getHermesSession } from '@/lib/db';
 import { MessageBubble, TypingIndicator } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import type { Message } from '@/types';
 
-async function callHermesAPI(text: string): Promise<string> {
+async function callHermesAPI(text: string, sessionId: string): Promise<string> {
   const res = await fetch('/api/chat', {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ message: text }),
+    body: JSON.stringify({ message: text, sessionId }),
   });
   if (!res.ok) throw new Error('Hermes API error');
   const data = await res.json();
@@ -25,7 +25,7 @@ function nanoid() {
 const WELCOME_MESSAGE: Message = {
   id: 'welcome',
   role: 'hermes',
-  content: `Salut. Je suis Hermes, ton assistant personnel.\n\nJe tourne entièrement sur ton téléphone pour l'instant — aucune donnée ne sort d'ici.\n\nPour commencer, je peux soit te poser des questions pour apprendre à te connaître, soit t'aider directement avec ce que t'as en tête.\n\nTu veux qu'on commence par quoi ?`,
+  content: `Salut. Je suis Hermes, ton Personal OS.\n\nJe tourne 24/7 sur Railway et je garde la mémoire de toutes nos conversations. Je peux t'aider avec :\n\n• Planning & reminders\n• Prendre des décisions\n• Apprendre à te connaître (profil)\n• Gérer tes projets\n• Tenir un journal\n\nTu veux qu'on commence par quoi ?`,
   timestamp: Date.now(),
   quickReplies: ["Pose-moi une question", "J'ai quelque chose à gérer"],
 };
@@ -44,6 +44,35 @@ export function ChatTab() {
       if (stored.length === 0) {
         await addMessage(WELCOME_MESSAGE);
         setMessages([WELCOME_MESSAGE]);
+
+        // Initialize Hermes with system prompt on first use
+        try {
+          const sessionId = await getHermesSession();
+          const systemPrompt = `Tu es Hermes, l'assistant personnel qui tourne 24/7 dans le Personal OS de l'utilisateur.
+
+Ton rôle :
+- Aide au planning, reminders, décisions, projets
+- Apprends à connaître l'utilisateur via des questions (onboarding)
+- Garde la mémoire de toutes les conversations grâce à --resume
+- Réponds toujours en français
+- Sois proactif et empathique
+
+Tu as accès à tous les tools Hermes (terminal, browser, code execution, memory, etc.). Utilise-les quand c'est pertinent.
+
+Important : L'utilisateur communique via une PWA mobile, donc garde tes réponses concises et lisibles sur petit écran.`;
+
+          // Send system prompt silently (don't show in UI)
+          await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({
+              message: systemPrompt,
+              sessionId
+            }),
+          });
+        } catch (error) {
+          console.error('Failed to initialize Hermes:', error);
+        }
       } else {
         setMessages(stored);
       }
@@ -66,7 +95,9 @@ export function ChatTab() {
     setHermesTyping(true);
 
     try {
-      const content = await callHermesAPI(text);
+      // Get or create persistent Hermes session
+      const sessionId = await getHermesSession();
+      const content = await callHermesAPI(text, sessionId);
       const hermesMsg: Message = {
         id: nanoid(),
         role: 'hermes',

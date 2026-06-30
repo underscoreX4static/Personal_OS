@@ -30,6 +30,10 @@ interface PersonalOSDB extends DBSchema {
     value: JournalEntry;
     indexes: { 'by-timestamp': number };
   };
+  hermes_session: {
+    key: string;
+    value: { id: string; sessionId: string; lastUsed: number };
+  };
 }
 
 let dbInstance: IDBPDatabase<PersonalOSDB> | null = null;
@@ -37,21 +41,27 @@ let dbInstance: IDBPDatabase<PersonalOSDB> | null = null;
 export async function getDB(): Promise<IDBPDatabase<PersonalOSDB>> {
   if (dbInstance) return dbInstance;
 
-  dbInstance = await openDB<PersonalOSDB>('personal-os', 1, {
-    upgrade(db) {
-      const convStore = db.createObjectStore('conversations', { keyPath: 'id' });
-      convStore.createIndex('by-timestamp', 'timestamp');
+  dbInstance = await openDB<PersonalOSDB>('personal-os', 2, {
+    upgrade(db, oldVersion) {
+      if (oldVersion < 1) {
+        const convStore = db.createObjectStore('conversations', { keyPath: 'id' });
+        convStore.createIndex('by-timestamp', 'timestamp');
 
-      db.createObjectStore('profile', { keyPath: 'id' });
-      db.createObjectStore('onboarding_pool', { keyPath: 'id' });
+        db.createObjectStore('profile', { keyPath: 'id' });
+        db.createObjectStore('onboarding_pool', { keyPath: 'id' });
 
-      const remStore = db.createObjectStore('reminders', { keyPath: 'id' });
-      remStore.createIndex('by-due', 'due_at');
+        const remStore = db.createObjectStore('reminders', { keyPath: 'id' });
+        remStore.createIndex('by-due', 'due_at');
 
-      db.createObjectStore('projects', { keyPath: 'id' });
+        db.createObjectStore('projects', { keyPath: 'id' });
 
-      const journalStore = db.createObjectStore('journal', { keyPath: 'id' });
-      journalStore.createIndex('by-timestamp', 'timestamp');
+        const journalStore = db.createObjectStore('journal', { keyPath: 'id' });
+        journalStore.createIndex('by-timestamp', 'timestamp');
+      }
+
+      if (oldVersion < 2) {
+        db.createObjectStore('hermes_session', { keyPath: 'id' });
+      }
     },
   });
 
@@ -157,4 +167,33 @@ export async function getJournal(): Promise<JournalEntry[]> {
 export async function addJournalEntry(entry: JournalEntry): Promise<void> {
   const db = await getDB();
   await db.put('journal', entry);
+}
+
+// --- Hermes Session ---
+export async function getHermesSession(): Promise<string> {
+  const db = await getDB();
+  const session = await db.get('hermes_session', 'main');
+
+  if (session) {
+    // Update lastUsed timestamp
+    await db.put('hermes_session', {
+      ...session,
+      lastUsed: Date.now(),
+    });
+    return session.sessionId;
+  }
+
+  // Create new session with a unique ID
+  const newSessionId = `hermes-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  await db.put('hermes_session', {
+    id: 'main',
+    sessionId: newSessionId,
+    lastUsed: Date.now(),
+  });
+  return newSessionId;
+}
+
+export async function resetHermesSession(): Promise<void> {
+  const db = await getDB();
+  await db.delete('hermes_session', 'main');
 }

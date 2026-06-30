@@ -11,12 +11,13 @@ console.log('[STARTUP] ANTHROPIC_API_KEY present:', 'ANTHROPIC_API_KEY' in proce
 console.log('[STARTUP] ANTHROPIC_API_KEY value:', ANTHROPIC_API_KEY ? `${ANTHROPIC_API_KEY.substring(0, 10)}...` : 'EMPTY');
 
 // TODO: replace with direct Hermes API when available
-function callHermes(message: string, sessionId?: string): Promise<string> {
+function callHermes(message: string, sessionId: string): Promise<string> {
   return new Promise((resolve, reject) => {
-    const args = ['chat', '-q', message];
-    if (sessionId) args.push('--resume', sessionId);
+    // Always use --resume with sessionId for persistent memory
+    const args = ['chat', '-q', message, '--resume', sessionId];
 
     console.log('[callHermes] Spawning:', HERMES_BIN, args);
+    console.log('[callHermes] Session ID:', sessionId);
 
     const proc = spawn(HERMES_BIN, args, {
       env: {
@@ -95,10 +96,14 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Message vide' }, { status: 400 });
     }
 
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Session ID manquant' }, { status: 400 });
+    }
+
     console.log('[API] Calling Hermes with message:', message.trim());
+    console.log('[API] Session ID:', sessionId);
     console.log('[API] HERMES_BIN:', HERMES_BIN);
     console.log('[API] ANTHROPIC_API_KEY set:', !!ANTHROPIC_API_KEY);
-    console.log('[API] ANTHROPIC_API_KEY value (first 10 chars):', ANTHROPIC_API_KEY.substring(0, 10));
     console.log('[API] HOME_DIR:', HOME_DIR);
 
     const reply = await callHermes(message.trim(), sessionId);
