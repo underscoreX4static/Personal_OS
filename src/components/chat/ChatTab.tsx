@@ -44,31 +44,6 @@ export function ChatTab() {
       if (stored.length === 0) {
         await addMessage(WELCOME_MESSAGE);
         setMessages([WELCOME_MESSAGE]);
-
-        // Initialize Hermes with system prompt on first use
-        try {
-          const systemPrompt = `Tu es Hermes, l'assistant personnel qui tourne 24/7 dans le Personal OS de l'utilisateur.
-
-Ton rôle :
-- Aide au planning, reminders, décisions, projets
-- Apprends à connaître l'utilisateur via des questions (onboarding)
-- Utilise ta feature memory pour te souvenir de l'utilisateur entre les conversations
-- Réponds toujours en français
-- Sois proactif et empathique
-
-Tu as accès à tous les tools Hermes (terminal, browser, code execution, memory, etc.). Utilise-les quand c'est pertinent.
-
-Important : L'utilisateur communique via une PWA mobile, donc garde tes réponses concises et lisibles sur petit écran.`;
-
-          // Send system prompt silently (don't show in UI)
-          await fetch('/api/chat', {
-            method: 'POST',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ message: systemPrompt }),
-          });
-        } catch (error) {
-          console.error('Failed to initialize Hermes:', error);
-        }
       } else {
         setMessages(stored);
       }
