@@ -9,41 +9,50 @@ RUN apt-get update && apt-get install -y \
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH"
 
-# Clone and install Hermes manually (non-interactive)
-RUN git clone https://github.com/NousResearch/hermes-agent /root/.hermes/hermes-agent
-
-WORKDIR /root/.hermes/hermes-agent
-
-# Install Python 3.11 via uv and create venv
-RUN uv python install 3.11 && \
-    uv venv --python 3.11 venv && \
-    uv sync --all-extras && \
-    ls -la /root/.hermes/hermes-agent/venv/bin/
-
-# Create hermes launcher
-RUN mkdir -p /root/.local/bin && \
-    printf '#!/usr/bin/env bash\nunset PYTHONPATH\nunset PYTHONHOME\nexec "/root/.hermes/hermes-agent/venv/bin/hermes" "$@"\n' > /root/.local/bin/hermes && \
-    chmod +x /root/.local/bin/hermes && \
-    echo "=== Testing Hermes installation ===" && \
-    ls -la /root/.local/bin/hermes && \
-    cat /root/.local/bin/hermes
-
-ENV PATH="/root/.local/bin:$PATH"
-
-# Hermes config — minimal, API key injected at runtime via env
-RUN mkdir -p /root/.hermes && \
-    printf 'model:\n  default: claude-haiku-4-5-20251001\n  provider: anthropic\n  api_key: ""\nagent:\n  max_turns: 50\n  system_prompt_enabled: true\n_config_version: 31\n' > /root/.hermes/config.yaml && \
-    printf '# env\n' > /root/.hermes/.env
-
-# Next.js app
+# Next.js app dependencies first (for Docker cache)
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
 
+# Clone and install Hermes IN /app so it persists
+RUN git clone https://github.com/NousResearch/hermes-agent /app/.hermes/hermes-agent
+
+WORKDIR /app/.hermes/hermes-agent
+
+# Install Python 3.11 via uv and create venv
+RUN uv python install 3.11 && \
+    uv venv --python 3.11 venv && \
+    uv sync --all-extras
+
+# Verify Hermes binary exists
+RUN ls -la /app/.hermes/hermes-agent/venv/bin/ && \
+    test -f /app/.hermes/hermes-agent/venv/bin/hermes && \
+    echo "✓ Hermes binary found in /app"
+
+# Create hermes launcher in /app
+RUN mkdir -p /app/.hermes/bin && \
+    printf '#!/usr/bin/env bash\nunset PYTHONPATH\nunset PYTHONHOME\nexec "/app/.hermes/hermes-agent/venv/bin/hermes" "$@"\n' > /app/.hermes/bin/hermes && \
+    chmod +x /app/.hermes/bin/hermes
+
+# Test the launcher works
+RUN /app/.hermes/bin/hermes --version || echo "Warning: hermes --version failed (might need API key)"
+
+# Hermes config in /app
+RUN mkdir -p /app/.hermes/config && \
+    printf 'model:\n  default: claude-haiku-4-5-20251001\n  provider: anthropic\n  api_key: ""\nagent:\n  max_turns: 50\n  system_prompt_enabled: true\n_config_version: 31\n' > /app/.hermes/config/config.yaml
+
+# Copy Next.js app and build
+WORKDIR /app
 COPY . .
 RUN npm run build
 
-ENV HERMES_BIN=/root/.local/bin/hermes
+# Final verification that Hermes is still there after build
+RUN ls -la /app/.hermes/hermes-agent/venv/bin/hermes && \
+    ls -la /app/.hermes/bin/hermes && \
+    echo "✓ Hermes persisted after Next.js build"
+
+ENV HERMES_BIN=/app/.hermes/bin/hermes
+ENV HOME=/app/.hermes/config
 ENV NODE_ENV=production
 ENV PORT=3000
 

@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { spawn } from 'child_process';
 
-const HERMES_BIN = process.env.HERMES_BIN || '/root/.local/bin/hermes';
+const HERMES_BIN = process.env.HERMES_BIN || '/app/.hermes/bin/hermes';
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY || '';
-const HOME_DIR = process.env.HOME || '/root';
+const HOME_DIR = process.env.HOME || '/app/.hermes/config';
 
 // TODO: replace with direct Hermes API when available
 function callHermes(message: string, sessionId?: string): Promise<string> {
