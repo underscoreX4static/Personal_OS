@@ -1,16 +1,15 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 interface Props {
   onSend: (text: string) => void;
   disabled?: boolean;
+  onVoiceStart: () => void;
 }
 
-export function ChatInput({ onSend, disabled }: Props) {
+export function ChatInput({ onSend, disabled, onVoiceStart }: Props) {
   const [text, setText] = useState('');
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const handleSend = useCallback(() => {
     const trimmed = text.trim();
@@ -26,38 +25,9 @@ export function ChatInput({ onSend, disabled }: Props) {
     }
   };
 
-  const toggleVoice = useCallback(() => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      alert("La dictée vocale n'est pas disponible dans ce navigateur.");
-      return;
-    }
-
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-
-    const SR = (window as unknown as { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition
-      || (window as unknown as { webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
-    if (!SR) return;
-
-    const rec = new SR();
-    rec.lang = 'fr-FR';
-    rec.continuous = false;
-    rec.interimResults = false;
-
-    rec.onresult = (e) => {
-      const transcript = e.results[0][0].transcript;
-      setText((prev) => prev + (prev ? ' ' : '') + transcript);
-    };
-    rec.onend = () => setIsListening(false);
-    rec.onerror = () => setIsListening(false);
-
-    recognitionRef.current = rec;
-    rec.start();
-    setIsListening(true);
-  }, [isListening]);
+  const handleVoiceClick = useCallback(() => {
+    onVoiceStart();
+  }, [onVoiceStart]);
 
   return (
     <div
@@ -66,12 +36,8 @@ export function ChatInput({ onSend, disabled }: Props) {
     >
       <div className="flex items-end gap-2">
         <button
-          onClick={toggleVoice}
-          className={`flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full transition-all ${
-            isListening
-              ? 'animate-pulse bg-pink-500 text-white'
-              : 'bg-card text-mut'
-          }`}
+          onClick={handleVoiceClick}
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full bg-card text-mut transition-all active:opacity-70"
           style={{ border: '1px solid #272232', minHeight: 44 }}
           aria-label="Dictée vocale"
         >

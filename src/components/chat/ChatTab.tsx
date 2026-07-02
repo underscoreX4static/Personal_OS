@@ -1,10 +1,12 @@
 'use client';
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { getMessages, addMessage, getHermesSession } from '@/lib/db';
 import { MessageBubble, TypingIndicator } from './MessageBubble';
 import { ChatInput } from './ChatInput';
+import { VoiceInput } from './VoiceInput';
+import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import type { Message } from '@/types';
 
 async function callHermesAPI(text: string): Promise<string> {
@@ -34,6 +36,8 @@ export function ChatTab() {
   const { messages, setMessages, addMessage: storeAddMessage, isHermesTyping, setHermesTyping } = useAppStore();
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
+  const [showVoiceInput, setShowVoiceInput] = useState(false);
+  const { startRecording } = useVoiceRecorder();
 
   useEffect(() => {
     if (initialized.current) return;
@@ -93,6 +97,24 @@ export function ChatTab() {
     sendMessage(reply);
   }, [sendMessage]);
 
+  const handleVoiceStart = useCallback(async () => {
+    setShowVoiceInput(true);
+    await startRecording();
+  }, [startRecording]);
+
+  const handleVoiceCancel = useCallback(() => {
+    setShowVoiceInput(false);
+  }, []);
+
+  const handleVoiceSend = useCallback((text: string) => {
+    setShowVoiceInput(false);
+    sendMessage(text);
+  }, [sendMessage]);
+
+  if (showVoiceInput) {
+    return <VoiceInput onSend={handleVoiceSend} onCancel={handleVoiceCancel} />;
+  }
+
   return (
     <div className="flex h-full flex-col">
       <div
@@ -120,7 +142,11 @@ export function ChatTab() {
         {isHermesTyping && <TypingIndicator />}
         <div ref={bottomRef} />
       </div>
-      <ChatInput onSend={sendMessage} disabled={isHermesTyping} />
+      <ChatInput
+        onSend={sendMessage}
+        disabled={isHermesTyping}
+        onVoiceStart={handleVoiceStart}
+      />
     </div>
   );
 }
