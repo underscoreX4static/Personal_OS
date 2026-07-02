@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Job, JobStatus, CreateJobResponse, JobStatusResponse } from '@/types/jobs';
 import { saveJob } from '@/lib/db';
-import { showNotification } from '@/lib/notifications';
+import { showNotification, registerBackgroundSync } from '@/lib/notifications';
 
 interface UseBackgroundJobReturn {
   startJob: (message: string) => Promise<string>; // Returns jobId
@@ -96,15 +96,11 @@ export function useBackgroundJob(onComplete?: (result: string) => void): UseBack
       setJob(initialJob);
       await saveJob(initialJob);
 
-      // Show immediate notification that job started
-      await showNotification('Personal OS travaille', {
-        body: 'Hermes gère ta demande en arrière-plan. Tu recevras une notification quand il aura répondu.',
-        tag: `job-start-${jobId}`,
-        icon: '/icon-192.png',
-        requireInteraction: false, // Auto-dismiss after a few seconds
-      });
+      // Register background sync for Service Worker
+      const syncRegistered = await registerBackgroundSync(jobId);
+      console.log('[useBackgroundJob] Background sync registered:', syncRegistered);
 
-      // Start polling
+      // Start client-side polling (will continue while app is open)
       setIsPolling(true);
       pollingIntervalRef.current = setInterval(() => {
         pollJobStatus(jobId);

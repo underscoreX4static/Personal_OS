@@ -70,3 +70,20 @@ export async function registerPushSubscription(): Promise<PushSubscription | nul
     return null;
   }
 }
+
+export async function registerBackgroundSync(jobId: string): Promise<boolean> {
+  if (!('serviceWorker' in navigator) || !('SyncManager' in window)) {
+    console.warn('[BackgroundSync] Not supported');
+    return false;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    await registration.sync.register(`poll-job-${jobId}`);
+    console.log('[BackgroundSync] Registered for job:', jobId);
+    return true;
+  } catch (error) {
+    console.error('[BackgroundSync] Failed to register:', error);
+    return false;
+  }
+}

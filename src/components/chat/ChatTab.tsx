@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { getMessages, addMessage } from '@/lib/db';
+import { getMessages, addMessage, getAllJobs } from '@/lib/db';
 import { MessageBubble, TypingIndicator } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { VoiceInput } from './VoiceInput';
@@ -54,8 +54,30 @@ export function ChatTab() {
       } else {
         setMessages(stored);
       }
+
+      // Check for completed jobs from background sync
+      const jobs = await getAllJobs();
+      const completedJobs = jobs.filter(j =>
+        j.status === 'completed' &&
+        j.completedAt &&
+        !stored.some(m => m.content === j.result) // Not already in messages
+      );
+
+      // Add completed job responses to messages
+      for (const job of completedJobs) {
+        if (job.result) {
+          const hermesMsg: Message = {
+            id: nanoid(),
+            role: 'hermes',
+            content: job.result,
+            timestamp: job.completedAt || Date.now(),
+          };
+          await addMessage(hermesMsg);
+          storeAddMessage(hermesMsg);
+        }
+      }
     })();
-  }, [setMessages]);
+  }, [setMessages, storeAddMessage]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
