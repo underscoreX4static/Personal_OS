@@ -1,5 +1,6 @@
 import { openDB, DBSchema, IDBPDatabase } from 'idb';
 import type { Message, Reminder, Project, JournalEntry, OnboardingQuestion, Profile } from '@/types';
+import type { Job } from '@/types/jobs';
 import { INITIAL_PROFILE, ONBOARDING_POOL } from './initialData';
 
 interface PersonalOSDB extends DBSchema {
@@ -34,6 +35,11 @@ interface PersonalOSDB extends DBSchema {
     key: string;
     value: { id: string; sessionId: string; lastUsed: number };
   };
+  jobs: {
+    key: string;
+    value: Job;
+    indexes: { 'by-created': number };
+  };
 }
 
 let dbInstance: IDBPDatabase<PersonalOSDB> | null = null;
@@ -41,7 +47,7 @@ let dbInstance: IDBPDatabase<PersonalOSDB> | null = null;
 export async function getDB(): Promise<IDBPDatabase<PersonalOSDB>> {
   if (dbInstance) return dbInstance;
 
-  dbInstance = await openDB<PersonalOSDB>('personal-os', 2, {
+  dbInstance = await openDB<PersonalOSDB>('personal-os', 3, {
     upgrade(db, oldVersion) {
       if (oldVersion < 1) {
         const convStore = db.createObjectStore('conversations', { keyPath: 'id' });
@@ -61,6 +67,11 @@ export async function getDB(): Promise<IDBPDatabase<PersonalOSDB>> {
 
       if (oldVersion < 2) {
         db.createObjectStore('hermes_session', { keyPath: 'id' });
+      }
+
+      if (oldVersion < 3) {
+        const jobsStore = db.createObjectStore('jobs', { keyPath: 'id' });
+        jobsStore.createIndex('by-created', 'createdAt');
       }
     },
   });
@@ -196,4 +207,25 @@ export async function getHermesSession(): Promise<string> {
 export async function resetHermesSession(): Promise<void> {
   const db = await getDB();
   await db.delete('hermes_session', 'main');
+}
+
+// --- Jobs ---
+export async function saveJob(job: Job): Promise<void> {
+  const db = await getDB();
+  await db.put('jobs', job);
+}
+
+export async function getJobFromDB(jobId: string): Promise<Job | undefined> {
+  const db = await getDB();
+  return db.get('jobs', jobId);
+}
+
+export async function getAllJobs(): Promise<Job[]> {
+  const db = await getDB();
+  return db.getAllFromIndex('jobs', 'by-created');
+}
+
+export async function deleteJob(jobId: string): Promise<void> {
+  const db = await getDB();
+  await db.delete('jobs', jobId);
 }
