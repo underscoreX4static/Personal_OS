@@ -2,6 +2,7 @@
 
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 
 interface VoiceInputProps {
   onSend: (text: string) => void;
@@ -23,11 +24,19 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
   } = useVoiceRecorder();
 
   const [editedText, setEditedText] = useState('');
+  const [mounted, setMounted] = useState(false);
+
+  // Wait for client-side mount
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Auto-start recording when component mounts
   useEffect(() => {
-    startRecording();
-  }, [startRecording]);
+    if (mounted) {
+      startRecording();
+    }
+  }, [mounted, startRecording]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -57,22 +66,25 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
     onCancel();
   };
 
-  // Idle/Loading state - show loading while initializing
-  if (state === 'idle') {
-    return (
-      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900">
-        <div className="text-center">
-          <div className="mb-4 text-4xl">🎤</div>
-          <p className="text-gray-400">Initialisation du micro...</p>
-        </div>
-      </div>
-    );
-  }
+  if (!mounted) return null;
 
-  // Recording or Paused state
-  if (state === 'recording' || state === 'paused') {
-    return (
-      <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900">
+  const content = (() => {
+    // Idle/Loading state - show loading while initializing
+    if (state === 'idle') {
+      return (
+        <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
+          <div className="text-center">
+            <div className="mb-4 text-4xl">🎤</div>
+            <p className="text-gray-400">Initialisation du micro...</p>
+          </div>
+        </div>
+      );
+    }
+
+    // Recording or Paused state
+    if (state === 'recording' || state === 'paused') {
+      return (
+        <div className="fixed inset-0 flex flex-col bg-slate-900">
         {/* Header */}
         <div className={`px-4 py-3 ${state === 'recording' ? 'bg-red-600' : 'bg-orange-600'}`}>
           <div className="flex items-center justify-between">
@@ -147,15 +159,15 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
           >
             ⏹ Stop
           </button>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  // Preview state
-  if (state === 'preview') {
-    return (
-      <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900">
+    // Preview state
+    if (state === 'preview') {
+      return (
+        <div className="fixed inset-0 flex flex-col bg-slate-900">
         {/* Header */}
         <div className="border-b border-slate-700 bg-slate-800 px-4 py-3">
           <h3 className="text-sm font-medium text-white">Transcription</h3>
@@ -194,10 +206,13 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
           >
             📤 Envoyer
           </button>
+          </div>
         </div>
-      </div>
-    );
-  }
+      );
+    }
 
-  return null;
+    return null;
+  })();
+
+  return createPortal(content, document.body);
 }
