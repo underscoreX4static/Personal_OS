@@ -108,8 +108,7 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      // Remove -q flag to get verbose output with tool progress
-      const args = ['chat', message];
+      const args = ['chat', '-q', message];
 
       const proc = spawn(HERMES_BIN, args, {
         env: {
@@ -129,28 +128,29 @@ export async function POST(req: NextRequest) {
         controller.enqueue(encoder.encode(`data: ${data}\n\n`));
       };
 
-      // Parse stdout line by line for tool events
+      // Parse stdout for final response
       proc.stdout.on('data', (chunk) => {
         const text = chunk.toString();
         fullOutput += text;
+        console.log('[SSE] Hermes stdout:', text);
+      });
 
-        // Split by lines and parse each
+      // Parse stderr for tool progress events (Hermes outputs tool info to stderr)
+      proc.stderr.on('data', (chunk) => {
+        const text = chunk.toString();
+        errorOutput += text;
+
+        // Split by lines and parse each for tool events
         const lines = text.split('\n');
         for (const line of lines) {
           if (line.trim()) {
-            console.log('[SSE] Hermes stdout:', line);
+            console.log('[SSE] Hermes stderr:', line);
             const event = parseHermesOutput(line);
             if (event) {
               sendEvent(event);
             }
           }
         }
-      });
-
-      proc.stderr.on('data', (chunk) => {
-        const text = chunk.toString();
-        errorOutput += text;
-        console.error('[SSE] Hermes stderr:', text);
       });
 
       proc.on('close', (code) => {
