@@ -26,12 +26,10 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
   const [editedText, setEditedText] = useState('');
   const [mounted, setMounted] = useState(false);
 
-  // Wait for client-side mount
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  // Auto-start recording when component mounts
   useEffect(() => {
     if (mounted) {
       startRecording();
@@ -69,143 +67,147 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
   if (!mounted) return null;
 
   const content = (() => {
-    // Idle/Loading state - show loading while initializing
+    // Loading
     if (state === 'idle') {
       return (
-        <div className="fixed inset-0 flex items-center justify-center bg-slate-900">
+        <div className="fixed inset-0 flex items-center justify-center bg-black">
           <div className="text-center">
-            <div className="mb-4 text-4xl">🎤</div>
-            <p className="text-gray-400">Initialisation du micro...</p>
+            <div className="mb-4 text-5xl animate-pulse">🎤</div>
+            <p className="text-gray-400 text-lg">Initialisation...</p>
           </div>
         </div>
       );
     }
 
-    // Recording or Paused state
+    // Recording or Paused
     if (state === 'recording' || state === 'paused') {
       return (
-        <div className="fixed inset-0 flex flex-col bg-slate-900">
-        {/* Header */}
-        <div className={`px-4 py-3 ${state === 'recording' ? 'bg-red-600' : 'bg-orange-600'}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {state === 'recording' ? (
-                <>
-                  <div className="h-3 w-3 animate-pulse rounded-full bg-white" />
-                  <span className="text-sm font-medium text-white">Enregistrement</span>
-                </>
-              ) : (
-                <>
-                  <div className="h-3 w-3 rounded-full bg-white" />
-                  <span className="text-sm font-medium text-white">En pause</span>
-                </>
-              )}
+        <div className="fixed inset-0 flex flex-col bg-black">
+          {/* Header status */}
+          <div className={`px-6 py-4 ${state === 'recording' ? 'bg-red-600' : 'bg-orange-600'}`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                {state === 'recording' ? (
+                  <>
+                    <div className="h-4 w-4 animate-pulse rounded-full bg-white" />
+                    <span className="text-base font-semibold text-white">Enregistrement</span>
+                  </>
+                ) : (
+                  <>
+                    <div className="h-4 w-4 rounded-full bg-white opacity-70" />
+                    <span className="text-base font-semibold text-white">En pause</span>
+                  </>
+                )}
+              </div>
+              <span className="text-base font-mono font-semibold text-white">{formatDuration(duration)}</span>
             </div>
-            <span className="text-sm font-mono text-white">{formatDuration(duration)}</span>
           </div>
-        </div>
 
-        {/* Waveform */}
-        <div className="flex h-24 items-center justify-center gap-1 bg-slate-800 px-4">
-          {Array.from({ length: 40 }).map((_, i) => {
-            const height = state === 'recording'
-              ? Math.random() * audioLevel * 60 + 10
-              : 10;
-            return (
-              <div
-                key={i}
-                className="w-1 rounded-full bg-violet-500 transition-all duration-100"
-                style={{ height: `${height}px` }}
-              />
-            );
-          })}
-        </div>
+          {/* Waveform */}
+          <div className="flex h-32 items-center justify-center gap-1 bg-gray-900 px-6">
+            {Array.from({ length: 30 }).map((_, i) => {
+              const height = state === 'recording'
+                ? Math.random() * audioLevel * 80 + 15
+                : 15;
+              return (
+                <div
+                  key={i}
+                  className="w-1.5 rounded-full bg-violet-500 transition-all duration-100"
+                  style={{ height: `${height}px` }}
+                />
+              );
+            })}
+          </div>
 
-        {/* Transcript preview */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <p className="text-gray-300 whitespace-pre-wrap">
-            {transcript || 'Parle maintenant...'}
-          </p>
-        </div>
+          {/* Transcript preview - scrollable area */}
+          <div className="flex-1 overflow-y-auto bg-black px-6 py-6">
+            <p className="text-gray-300 text-lg whitespace-pre-wrap leading-relaxed">
+              {transcript || 'Parle maintenant...'}
+            </p>
+          </div>
 
-        {/* Controls */}
-        <div className="flex gap-3 border-t border-slate-700 bg-slate-800 p-4">
-          <button
-            onClick={handleCancel}
-            className="flex-1 rounded-lg bg-slate-700 py-3 text-sm font-medium text-white active:bg-slate-600"
-          >
-            Annuler
-          </button>
+          {/* Controls - AVEC PADDING BOTTOM POUR ÉVITER LA NAV */}
+          <div className="bg-black px-6 pb-28 pt-6">
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancel}
+                className="flex-1 rounded-xl bg-gray-800 py-4 text-base font-semibold text-white active:bg-gray-700"
+              >
+                ✕ Annuler
+              </button>
 
-          {state === 'recording' ? (
-            <button
-              onClick={pauseRecording}
-              className="flex-1 rounded-lg bg-orange-600 py-3 text-sm font-medium text-white active:bg-orange-700"
-            >
-              ⏸ Pause
-            </button>
-          ) : (
-            <button
-              onClick={resumeRecording}
-              className="flex-1 rounded-lg bg-green-600 py-3 text-sm font-medium text-white active:bg-green-700"
-            >
-              ▶️ Reprendre
-            </button>
-          )}
+              {state === 'recording' ? (
+                <button
+                  onClick={pauseRecording}
+                  className="flex-1 rounded-xl bg-orange-600 py-4 text-base font-semibold text-white active:bg-orange-700"
+                >
+                  ⏸ Pause
+                </button>
+              ) : (
+                <button
+                  onClick={resumeRecording}
+                  className="flex-1 rounded-xl bg-green-600 py-4 text-base font-semibold text-white active:bg-green-700"
+                >
+                  ▶️ Reprendre
+                </button>
+              )}
 
-          <button
-            onClick={handleStop}
-            className="flex-1 rounded-lg bg-violet-600 py-3 text-sm font-medium text-white active:bg-violet-700"
-          >
-            ⏹ Stop
-          </button>
+              <button
+                onClick={handleStop}
+                className="flex-1 rounded-xl bg-violet-600 py-4 text-base font-semibold text-white active:bg-violet-700"
+              >
+                ⏹ Stop
+              </button>
+            </div>
           </div>
         </div>
       );
     }
 
-    // Preview state
+    // Preview
     if (state === 'preview') {
       return (
-        <div className="fixed inset-0 flex flex-col bg-slate-900">
-        {/* Header */}
-        <div className="border-b border-slate-700 bg-slate-800 px-4 py-3">
-          <h3 className="text-sm font-medium text-white">Transcription</h3>
-        </div>
+        <div className="fixed inset-0 flex flex-col bg-black">
+          {/* Header */}
+          <div className="border-b border-gray-800 bg-gray-900 px-6 py-4">
+            <h3 className="text-base font-semibold text-white">Transcription</h3>
+          </div>
 
-        {/* Editable transcript */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <textarea
-            value={editedText || transcript}
-            onChange={(e) => setEditedText(e.target.value)}
-            className="h-full w-full resize-none bg-transparent text-gray-300 outline-none"
-            placeholder="Ton message..."
-            autoFocus
-          />
-        </div>
+          {/* Editable text area */}
+          <div className="flex-1 overflow-y-auto bg-black px-6 py-6">
+            <textarea
+              value={editedText || transcript}
+              onChange={(e) => setEditedText(e.target.value)}
+              className="h-full w-full resize-none bg-transparent text-lg text-gray-300 outline-none leading-relaxed"
+              placeholder="Ton message..."
+              autoFocus
+            />
+          </div>
 
-        {/* Actions */}
-        <div className="flex gap-3 border-t border-slate-700 bg-slate-800 p-4">
-          <button
-            onClick={handleCancel}
-            className="rounded-lg bg-slate-700 px-4 py-3 text-sm font-medium text-white active:bg-slate-600"
-          >
-            Annuler
-          </button>
+          {/* Actions - AVEC PADDING BOTTOM */}
+          <div className="bg-black px-6 pb-28 pt-6">
+            <div className="flex gap-3">
+              <button
+                onClick={handleCancel}
+                className="rounded-xl bg-gray-800 px-5 py-4 text-base font-semibold text-white active:bg-gray-700"
+              >
+                ✕ Annuler
+              </button>
 
-          <button
-            onClick={handleAddMore}
-            className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-3 text-sm font-medium text-white active:bg-orange-700"
-          >
-            🎤 Ajouter
-          </button>
+              <button
+                onClick={handleAddMore}
+                className="flex items-center gap-2 rounded-xl bg-orange-600 px-5 py-4 text-base font-semibold text-white active:bg-orange-700"
+              >
+                🎤 Ajouter
+              </button>
 
-          <button
-            onClick={handleSend}
-            className="flex-1 rounded-lg bg-violet-600 py-3 text-sm font-medium text-white active:bg-violet-700"
-          >
-            📤 Envoyer
-          </button>
+              <button
+                onClick={handleSend}
+                className="flex-1 rounded-xl bg-violet-600 py-4 text-base font-semibold text-white active:bg-violet-700"
+              >
+                📤 Envoyer
+              </button>
+            </div>
           </div>
         </div>
       );
