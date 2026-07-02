@@ -54,39 +54,19 @@ export async function registerPushSubscription(): Promise<PushSubscription | nul
     const registration = await navigator.serviceWorker.ready;
 
     // Check if already subscribed
-    let subscription = await registration.pushManager.getSubscription();
+    const subscription = await registration.pushManager.getSubscription();
 
-    if (!subscription) {
-      // Subscribe to push notifications
-      // Note: You'll need a VAPID public key for production
-      subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(
-          // This is a placeholder - in production you'd use your own VAPID key
-          'BEl62iUYgUivxIkv69yViEuiBIa-Ib37J8xQmrq1Gz8LuuxFQvGpGFmG1uzKJQSQXE-KPFCUkH0xNQYKzWvDCPs'
-        ),
-      });
+    if (subscription) {
+      console.log('[Push] Already subscribed:', JSON.stringify(subscription));
+      return subscription;
     }
 
-    // Send subscription to server (you can implement this later)
-    console.log('[Push] Subscription:', JSON.stringify(subscription));
-
-    return subscription;
+    // For now, we don't need server push - just local notifications
+    // Push subscription would require VAPID keys and server setup
+    console.log('[Push] Using local notifications only (no server push)');
+    return null;
   } catch (error) {
-    console.error('[Push] Failed to subscribe:', error);
+    console.error('[Push] Failed to check subscription:', error);
     return null;
   }
-}
-
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
-  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
-
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
 }
