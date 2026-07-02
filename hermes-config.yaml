@@ -3,7 +3,7 @@ model:
   provider: anthropic
 agent:
   max_turns: 150
-  verbose: false
+  verbose: true
   reasoning_effort: medium
   system_prompt: |
     Tu es Hermes, l'assistant personnel qui tourne 24/7 dans le Personal OS de l'utilisateur.

@@ -14,48 +14,84 @@ interface ToolEvent {
 
 function parseHermesOutput(line: string): ToolEvent | null {
   const timestamp = Date.now();
+  const lowerLine = line.toLowerCase();
 
-  // Detect tool usage patterns in Hermes output
-  // Examples from Hermes CLI:
-  // "Using tool: bash"
-  // "Running command: ls"
-  // "Reading file: /path/to/file"
-  // "Searching web for: query"
-  // "Writing to memory: key"
+  // Hermes verbose output patterns:
+  // "[Tool] terminal: <command>"
+  // "Tool: terminal"
+  // "Using terminal..."
+  // "Calling <tool_name>..."
+  // "Running: <command>"
+  // etc.
 
-  // Terminal/Bash tool
-  if (line.includes('Running command:') || line.includes('bash')) {
+  // Tool name extraction patterns
+  if (line.includes('[Tool]') || line.includes('Tool:')) {
+    if (lowerLine.includes('terminal') || lowerLine.includes('bash')) {
+      return { type: 'tool', tool: 'terminal', message: line.trim(), timestamp };
+    }
+    if (lowerLine.includes('browser') || lowerLine.includes('web')) {
+      return { type: 'tool', tool: 'browser', message: line.trim(), timestamp };
+    }
+    if (lowerLine.includes('file') || lowerLine.includes('read') || lowerLine.includes('write')) {
+      return { type: 'tool', tool: 'file', message: line.trim(), timestamp };
+    }
+    if (lowerLine.includes('memory') || lowerLine.includes('store') || lowerLine.includes('recall')) {
+      return { type: 'tool', tool: 'memory', message: line.trim(), timestamp };
+    }
+    if (lowerLine.includes('code') || lowerLine.includes('execute') || lowerLine.includes('python') || lowerLine.includes('node')) {
+      return { type: 'tool', tool: 'code', message: line.trim(), timestamp };
+    }
+    return { type: 'tool', tool: 'unknown', message: line.trim(), timestamp };
+  }
+
+  // Action patterns (more permissive)
+  if (lowerLine.includes('running:') || lowerLine.includes('executing:') || lowerLine.includes('command:')) {
     return { type: 'tool', tool: 'terminal', message: line.trim(), timestamp };
   }
 
-  // Browser/Web tool
-  if (line.includes('Searching') || line.includes('browser') || line.includes('web')) {
+  if (lowerLine.includes('searching') || lowerLine.includes('browsing') || lowerLine.includes('fetching')) {
     return { type: 'tool', tool: 'browser', message: line.trim(), timestamp };
   }
 
-  // File operations
-  if (line.includes('Reading file:') || line.includes('Writing file:') || line.includes('file')) {
+  if (lowerLine.includes('reading file') || lowerLine.includes('writing file') || lowerLine.includes('opening')) {
     return { type: 'tool', tool: 'file', message: line.trim(), timestamp };
   }
 
-  // Memory operations
-  if (line.includes('memory') || line.includes('Storing') || line.includes('Recalling')) {
+  if (lowerLine.includes('remembering') || lowerLine.includes('storing') || lowerLine.includes('recalling')) {
     return { type: 'tool', tool: 'memory', message: line.trim(), timestamp };
   }
 
-  // Code execution
-  if (line.includes('Executing') || line.includes('python') || line.includes('node')) {
-    return { type: 'tool', tool: 'code', message: line.trim(), timestamp };
-  }
-
-  // Thinking/reasoning
-  if (line.includes('thinking') || line.includes('reasoning') || line.includes('analyzing')) {
+  // Thinking indicators
+  if (lowerLine.includes('thinking') || lowerLine.includes('reasoning') || lowerLine.includes('analyzing') || lowerLine.includes('processing')) {
     return { type: 'thinking', message: line.trim(), timestamp };
   }
 
-  // Generic tool usage
-  if (line.includes('Using tool:') || line.includes('Tool:')) {
-    return { type: 'tool', tool: 'unknown', message: line.trim(), timestamp };
+  // Generic "Using X" or "Calling X" patterns
+  const usingMatch = line.match(/using\s+(\w+)/i);
+  const callingMatch = line.match(/calling\s+(\w+)/i);
+
+  if (usingMatch || callingMatch) {
+    const toolName = (usingMatch || callingMatch)?.[1]?.toLowerCase();
+    if (toolName) {
+      const toolMap: Record<string, string> = {
+        'terminal': 'terminal',
+        'bash': 'terminal',
+        'shell': 'terminal',
+        'browser': 'browser',
+        'web': 'browser',
+        'file': 'file',
+        'memory': 'memory',
+        'code': 'code',
+        'python': 'code',
+        'node': 'code',
+      };
+      return { type: 'tool', tool: toolMap[toolName] || 'unknown', message: line.trim(), timestamp };
+    }
+  }
+
+  // Progress indicators (keep showing activity)
+  if (line.includes('...') || line.includes('→') || line.includes('•')) {
+    return { type: 'thinking', message: line.trim(), timestamp };
   }
 
   return null;
@@ -72,7 +108,8 @@ export async function POST(req: NextRequest) {
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     start(controller) {
-      const args = ['chat', '-q', message];
+      // Remove -q flag to get verbose output with tool progress
+      const args = ['chat', message];
 
       const proc = spawn(HERMES_BIN, args, {
         env: {
