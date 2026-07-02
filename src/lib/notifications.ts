@@ -33,9 +33,8 @@ export async function showNotification(title: string, options?: NotificationOpti
     await registration.showNotification(title, {
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      vibrate: [200, 100, 200],
       ...options,
-    });
+    } as NotificationOptions);
   } else {
     // Fallback to regular notification
     new Notification(title, {
