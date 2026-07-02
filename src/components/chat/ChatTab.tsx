@@ -37,7 +37,6 @@ export function ChatTab() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
-  const { startRecording } = useVoiceRecorder();
 
   useEffect(() => {
     if (initialized.current) return;
@@ -97,10 +96,9 @@ export function ChatTab() {
     sendMessage(reply);
   }, [sendMessage]);
 
-  const handleVoiceStart = useCallback(async () => {
+  const handleVoiceStart = useCallback(() => {
     setShowVoiceInput(true);
-    await startRecording();
-  }, [startRecording]);
+  }, []);
 
   const handleVoiceCancel = useCallback(() => {
     setShowVoiceInput(false);

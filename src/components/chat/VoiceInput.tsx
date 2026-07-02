@@ -1,7 +1,7 @@
 'use client';
 
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface VoiceInputProps {
   onSend: (text: string) => void;
@@ -23,6 +23,11 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
   } = useVoiceRecorder();
 
   const [editedText, setEditedText] = useState('');
+
+  // Auto-start recording when component mounts
+  useEffect(() => {
+    startRecording();
+  }, [startRecording]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -52,9 +57,16 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
     onCancel();
   };
 
-  // Idle state - should not render (parent shows mic button)
+  // Idle/Loading state - show loading while initializing
   if (state === 'idle') {
-    return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
+        <div className="text-center">
+          <div className="mb-4 text-4xl">🎤</div>
+          <p className="text-gray-400">Initialisation du micro...</p>
+        </div>
+      </div>
+    );
   }
 
   // Recording or Paused state
