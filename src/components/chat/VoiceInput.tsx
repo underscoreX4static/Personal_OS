@@ -60,7 +60,7 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
   // Idle/Loading state - show loading while initializing
   if (state === 'idle') {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900">
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900">
         <div className="text-center">
           <div className="mb-4 text-4xl">🎤</div>
           <p className="text-gray-400">Initialisation du micro...</p>
@@ -72,7 +72,7 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
   // Recording or Paused state
   if (state === 'recording' || state === 'paused') {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-slate-900">
+      <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900">
         {/* Header */}
         <div className={`px-4 py-3 ${state === 'recording' ? 'bg-red-600' : 'bg-orange-600'}`}>
           <div className="flex items-center justify-between">
@@ -155,7 +155,7 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
   // Preview state
   if (state === 'preview') {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col bg-slate-900">
+      <div className="fixed inset-0 z-[100] flex flex-col bg-slate-900">
         {/* Header */}
         <div className="border-b border-slate-700 bg-slate-800 px-4 py-3">
           <h3 className="text-sm font-medium text-white">Transcription</h3>
