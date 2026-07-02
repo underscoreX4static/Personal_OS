@@ -7,6 +7,7 @@ interface UseVoiceRecorderReturn {
   audioLevel: number;
   duration: number;
   transcript: string;
+  interimTranscript: string;
   startRecording: () => Promise<void>;
   pauseRecording: () => void;
   resumeRecording: () => void;
@@ -20,6 +21,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const [audioLevel, setAudioLevel] = useState(0);
   const [duration, setDuration] = useState(0);
   const [transcript, setTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
@@ -90,21 +92,22 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         recognition.interimResults = true;
 
         recognition.onresult = (event: any) => {
-          let interimTranscript = '';
-          let finalTranscript = '';
+          let interim = '';
+          let final = '';
 
           for (let i = event.resultIndex; i < event.results.length; i++) {
             const transcriptPart = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-              finalTranscript += transcriptPart + ' ';
+              final += transcriptPart + ' ';
             } else {
-              interimTranscript += transcriptPart;
+              interim += transcriptPart;
             }
           }
 
-          if (finalTranscript) {
-            setTranscript(prev => prev + finalTranscript);
+          if (final) {
+            setTranscript(prev => prev + final);
           }
+          setInterimTranscript(interim);
         };
 
         recognition.onerror = (event: any) => {
@@ -122,6 +125,16 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
 
   const pauseRecording = useCallback(() => {
     if (mediaRecorderRef.current && state === 'recording') {
+      // Save interim text before stopping recognition
+      setTranscript(prev => {
+        const interim = interimTranscript.trim();
+        if (interim) {
+          return prev + interim + ' ';
+        }
+        return prev;
+      });
+      setInterimTranscript('');
+
       mediaRecorderRef.current.pause();
       setState('paused');
       pausedDurationRef.current += Date.now() - startTimeRef.current;
@@ -131,12 +144,12 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       }
       setAudioLevel(0);
 
-      // Pause speech recognition
+      // Stop speech recognition (will restart on resume)
       if (recognitionRef.current) {
         recognitionRef.current.stop();
       }
     }
-  }, [state]);
+  }, [state, interimTranscript]);
 
   const resumeRecording = useCallback(() => {
     if (mediaRecorderRef.current && state === 'paused') {
@@ -154,15 +167,22 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         recognition.interimResults = true;
 
         recognition.onresult = (event: any) => {
-          let finalTranscript = '';
+          let interim = '';
+          let final = '';
+
           for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcriptPart = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript + ' ';
+              final += transcriptPart + ' ';
+            } else {
+              interim += transcriptPart;
             }
           }
-          if (finalTranscript) {
-            setTranscript(prev => prev + finalTranscript);
+
+          if (final) {
+            setTranscript(prev => prev + final);
           }
+          setInterimTranscript(interim);
         };
 
         recognition.start();
@@ -236,6 +256,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     audioLevel,
     duration,
     transcript,
+    interimTranscript,
     startRecording,
     pauseRecording,
     resumeRecording,

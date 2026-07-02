@@ -15,6 +15,7 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
     audioLevel,
     duration,
     transcript,
+    interimTranscript,
     startRecording,
     pauseRecording,
     resumeRecording,
@@ -122,7 +123,11 @@ export function VoiceInput({ onSend, onCancel }: VoiceInputProps) {
           {/* Transcript preview - scrollable area */}
           <div className="flex-1 overflow-y-auto bg-black px-6 py-6">
             <p className="text-gray-300 text-lg whitespace-pre-wrap leading-relaxed">
-              {transcript || 'Parle maintenant...'}
+              {transcript}
+              {interimTranscript && (
+                <span className="text-gray-500">{interimTranscript}</span>
+              )}
+              {!transcript && !interimTranscript && 'Parle maintenant...'}
             </p>
           </div>
 
