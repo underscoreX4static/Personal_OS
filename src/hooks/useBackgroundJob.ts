@@ -96,6 +96,14 @@ export function useBackgroundJob(onComplete?: (result: string) => void): UseBack
       setJob(initialJob);
       await saveJob(initialJob);
 
+      // Show immediate notification that job started
+      await showNotification('Personal OS travaille', {
+        body: 'Hermes gère ta demande en arrière-plan. Tu recevras une notification quand il aura répondu.',
+        tag: `job-start-${jobId}`,
+        icon: '/icon-192.png',
+        requireInteraction: false, // Auto-dismiss after a few seconds
+      });
+
       // Start polling
       setIsPolling(true);
       pollingIntervalRef.current = setInterval(() => {

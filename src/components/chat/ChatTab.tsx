@@ -6,18 +6,8 @@ import { getMessages, addMessage } from '@/lib/db';
 import { MessageBubble, TypingIndicator } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { VoiceInput } from './VoiceInput';
+import { useBackgroundJob } from '@/hooks/useBackgroundJob';
 import type { Message } from '@/types';
-
-async function callHermesAPI(text: string): Promise<string> {
-  const res = await fetch('/api/chat', {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ message: text }),
-  });
-  if (!res.ok) throw new Error('Hermes API error');
-  const data = await res.json();
-  return data.reply;
-}
 
 function nanoid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
@@ -36,6 +26,21 @@ export function ChatTab() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const initialized = useRef(false);
   const [showVoiceInput, setShowVoiceInput] = useState(false);
+
+  // Background job hook
+  const { startJob } = useBackgroundJob((result) => {
+    // Callback when job completes
+    const hermesMsg: Message = {
+      id: nanoid(),
+      role: 'hermes',
+      content: result,
+      timestamp: Date.now(),
+    };
+    addMessage(hermesMsg).then(() => {
+      storeAddMessage(hermesMsg);
+      setHermesTyping(false);
+    });
+  });
 
   useEffect(() => {
     if (initialized.current) return;
@@ -68,28 +73,24 @@ export function ChatTab() {
     setHermesTyping(true);
 
     try {
-      const content = await callHermesAPI(text);
-      const hermesMsg: Message = {
-        id: nanoid(),
-        role: 'hermes',
-        content,
-        timestamp: Date.now(),
-      };
-      await addMessage(hermesMsg);
-      storeAddMessage(hermesMsg);
+      // Start background job (non-blocking)
+      await startJob(text);
+      // Job started successfully
+      // User will get notification immediately: "Personal OS travaille..."
+      // Then another notification when Hermes responds
+      // The callback above will handle adding the response to messages
     } catch (error) {
+      setHermesTyping(false);
       const errorMsg: Message = {
         id: nanoid(),
         role: 'hermes',
-        content: `Désolé, je n'arrive pas à me connecter au serveur Hermes en ce moment. Vérifie ta connexion internet et réessaie.\n\nErreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
+        content: `Désolé, je n'arrive pas à lancer Hermes. Vérifie ta connexion internet et réessaie.\n\nErreur: ${error instanceof Error ? error.message : 'Erreur inconnue'}`,
         timestamp: Date.now(),
       };
       await addMessage(errorMsg);
       storeAddMessage(errorMsg);
-    } finally {
-      setHermesTyping(false);
     }
-  }, [storeAddMessage, setHermesTyping]);
+  }, [storeAddMessage, setHermesTyping, startJob]);
 
   const handleQuickReply = useCallback((reply: string) => {
     sendMessage(reply);
