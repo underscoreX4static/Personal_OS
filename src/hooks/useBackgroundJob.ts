@@ -15,6 +15,7 @@ export function useBackgroundJob(onComplete?: (result: string) => void): UseBack
   const [isPolling, setIsPolling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const notificationShownRef = useRef(false);
 
   const stopPolling = useCallback(() => {
     if (pollingIntervalRef.current) {
@@ -116,6 +117,26 @@ export function useBackgroundJob(onComplete?: (result: string) => void): UseBack
       throw err;
     }
   }, [pollJobStatus]);
+
+  // Listen for app going to background (visibilitychange)
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+      if (document.hidden && isPolling && job && !notificationShownRef.current) {
+        // App went to background while job is running
+        notificationShownRef.current = true;
+        await showNotification('Personal OS travaille', {
+          body: 'Hermes gère ta demande en arrière-plan. Tu recevras une notification quand il aura répondu.',
+          tag: `job-background-${job.id}`,
+          icon: '/icon-192.png',
+        });
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isPolling, job]);
 
   // Cleanup on unmount
   useEffect(() => {
