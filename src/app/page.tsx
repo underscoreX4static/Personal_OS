@@ -8,6 +8,7 @@ import { ChatTab } from '@/components/chat/ChatTab';
 import { ProfileTab } from '@/components/profile/ProfileTab';
 import { PlanningTab } from '@/components/planning/PlanningTab';
 import { SystemTab } from '@/components/system/SystemTab';
+import { NotificationPermission } from '@/components/NotificationPermission';
 
 export default function Home() {
   const { activeTab, theme } = useAppStore();
@@ -71,6 +72,7 @@ export default function Home() {
       </main>
 
       <BottomNav />
+      <NotificationPermission />
     </div>
   );
 }

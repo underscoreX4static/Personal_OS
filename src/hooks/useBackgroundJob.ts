@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import type { Job, JobStatus, CreateJobResponse, JobStatusResponse } from '@/types/jobs';
 import { saveJob } from '@/lib/db';
+import { showNotification } from '@/lib/notifications';
 
 interface UseBackgroundJobReturn {
   startJob: (message: string) => Promise<string>; // Returns jobId
@@ -39,12 +40,25 @@ export function useBackgroundJob(onComplete?: (result: string) => void): UseBack
       // Check if job is complete
       if (updatedJob.status === 'completed') {
         stopPolling();
+
+        // Show notification
+        await showNotification('Hermes a répondu', {
+          body: updatedJob.result ? updatedJob.result.substring(0, 100) + '...' : 'Ouvre l\'app pour voir la réponse',
+          tag: `job-${jobId}`,
+        });
+
         if (onComplete && updatedJob.result) {
           onComplete(updatedJob.result);
         }
       } else if (updatedJob.status === 'error') {
         stopPolling();
         setError(updatedJob.error || 'Unknown error');
+
+        // Show error notification
+        await showNotification('Erreur Hermes', {
+          body: updatedJob.error || 'Une erreur est survenue',
+          tag: `job-${jobId}`,
+        });
       }
     } catch (err) {
       console.error('[useBackgroundJob] Polling error:', err);
