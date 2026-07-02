@@ -29,6 +29,7 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
   const startTimeRef = useRef<number>(0);
   const pausedDurationRef = useRef<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const updateAudioLevel = useCallback(() => {
     if (!analyserRef.current) return;
@@ -79,6 +80,40 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
 
       // Start audio level monitoring
       updateAudioLevel();
+
+      // Setup Web Speech Recognition (FREE!)
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'fr-FR';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (event: any) => {
+          let interimTranscript = '';
+          let finalTranscript = '';
+
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            const transcriptPart = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcriptPart + ' ';
+            } else {
+              interimTranscript += transcriptPart;
+            }
+          }
+
+          if (finalTranscript) {
+            setTranscript(prev => prev + finalTranscript);
+          }
+        };
+
+        recognition.onerror = (event: any) => {
+          console.error('Speech recognition error:', event.error);
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+      }
     } catch (error) {
       console.error('Failed to start recording:', error);
       alert('Impossible d\'accéder au microphone. Vérifie les permissions.');
@@ -95,6 +130,11 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         cancelAnimationFrame(animationFrameRef.current);
       }
       setAudioLevel(0);
+
+      // Pause speech recognition
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     }
   }, [state]);
 
@@ -104,6 +144,30 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
       setState('recording');
       startTimeRef.current = Date.now();
       updateAudioLevel();
+
+      // Resume speech recognition
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'fr-FR';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        recognition.onresult = (event: any) => {
+          let finalTranscript = '';
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+              finalTranscript += event.results[i][0].transcript + ' ';
+            }
+          }
+          if (finalTranscript) {
+            setTranscript(prev => prev + finalTranscript);
+          }
+        };
+
+        recognition.start();
+        recognitionRef.current = recognition;
+      }
     }
   }, [state, updateAudioLevel]);
 
@@ -125,34 +189,12 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
         if (audioContextRef.current) {
           audioContextRef.current.close();
         }
+        if (recognitionRef.current) {
+          recognitionRef.current.stop();
+        }
 
         // Stop all tracks
         mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
-
-        // Create audio blob
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-
-        // Send to transcription API
-        try {
-          const formData = new FormData();
-          formData.append('audio', audioBlob, 'recording.webm');
-
-          const res = await fetch('/api/transcribe', {
-            method: 'POST',
-            body: formData,
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            setTranscript(prev => prev ? `${prev} ${data.text}` : data.text);
-          } else {
-            console.error('Transcription failed');
-            alert('Erreur lors de la transcription');
-          }
-        } catch (error) {
-          console.error('Transcription error:', error);
-          alert('Erreur lors de la transcription');
-        }
 
         setState('preview');
         setAudioLevel(0);
@@ -177,6 +219,9 @@ export function useVoiceRecorder(): UseVoiceRecorderReturn {
     }
     if (audioContextRef.current) {
       audioContextRef.current.close();
+    }
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
     }
 
     audioChunksRef.current = [];
